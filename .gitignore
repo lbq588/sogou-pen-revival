@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+transcripts/
+*.wav
+*.WAV
+*.AVO
+*.PCM
