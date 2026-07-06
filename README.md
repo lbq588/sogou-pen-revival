@@ -1,12 +1,21 @@
 # sogou-pen-revival
 
-讓搜狗錄音筆在雲端服務關閉後復活：用本地 faster-whisper 取代已停運的雲端轉寫。
+讓搜狗錄音筆在原廠 2024-05-30 停止服務後繼續使用。兩條互補的路線：
 
-> **English**: Sogou (搜狗) smart recording pens lost their core speech-to-text
-> feature when the cloud transcription service shut down on **2024-05-30**.
-> This tool revives the pen by transcribing its recordings locally with
-> [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — no cloud, no
-> account, fully offline.
+1. **本地轉寫**（[transcribe_pen.py](transcribe_pen.py)）：讀 USB 掛載的錄音檔，用本地
+   faster-whisper 取代已停運的雲端轉寫。
+2. **BLE 協定與本地對時**（[ble/](ble/) + [docs/protocol_ble.md](docs/protocol_ble.md)）：逆向原廠
+   App 的藍牙協定，用 PC 直接跟筆對話——握手、對時，全程不需搜狗伺服器或帳號。恢復
+   停業後失效的功能。
+
+> **English**: Sogou (搜狗) smart recording pens lost cloud transcription and app
+> connectivity when the service shut down on **2024-05-30**. This project revives
+> them two ways: local transcription of the pen's recordings with
+> [faster-whisper](https://github.com/SYSTRAN/faster-whisper), and a clean-room
+> reimplementation of the pen's BLE protocol (handshake + time-sync over
+> [bleak](https://github.com/hbldh/bleak)) so a PC can talk to the pen with no
+> Sogou server or account. Interoperability reverse-engineering of user-owned
+> hardware after the vendor left the market. Not affiliated with Sogou/Tencent.
 
 ## 背景
 
@@ -67,6 +76,35 @@ AVO，WAV 已足夠轉寫使用。
 - `AVO` 原始格式未支援
 - Windows 開發測試；macOS/Linux 理論上可用（磁碟偵測邏輯掃描代號
   A–Z，非 Windows 環境需把筆的掛載點直接放進 `candidates`），歡迎 PR
+
+## BLE 協定與本地對時（進階）
+
+原廠 App 停業後，筆的 WiFi 快傳與對時失效。[docs/protocol_ble.md](docs/protocol_ble.md)
+記錄了對原廠 App 藍牙協定的逆向理解（C2 協定機種，如 C1 Pro），[ble/](ble/) 下是基於
+該理解的乾淨重新實作工具：
+
+| 腳本 | 用途 | 是否寫入筆 |
+| --- | --- | --- |
+| [ble/scan_pen_ble.py](ble/scan_pen_ble.py) | 掃描並列舉 GATT、判定協定分代 | 唯讀 |
+| [ble/probe_state_ble.py](ble/probe_state_ble.py) | 送唯讀查詢測通道回應 | 唯讀查詢 |
+| [ble/set_time_ble.py](ble/set_time_ble.py) | 送對時封包（預設 dry-run）| `--commit` 才寫 |
+| [ble/handshake_time_ble.py](ble/handshake_time_ble.py) | 送握手 → 對時 | 寫入 |
+
+```bash
+pip install bleak
+python ble/scan_pen_ble.py           # 先掃描，確認裝置與 GATT 佈局
+python ble/set_time_ble.py           # dry-run 預覽對時封包
+python ble/set_time_ble.py --commit  # 實際送出（筆需在配對模式）
+```
+
+關鍵結論：握手與對時全程本地運算，不需搜狗伺服器或帳號。工具只送非破壞性指令
+（握手、對時、唯讀查詢），絕不送解除配對/恢復出廠。詳見 [docs/protocol_ble.md](docs/protocol_ble.md)。
+
+## 免責
+
+本專案為互通性逆向工程，對象為使用者自有硬體、且原廠已停止服務。與搜狗／騰訊
+無任何關聯，非官方專案。不重新散布任何原廠二進位檔、金鑰或受版權程式碼——只發布
+基於協定理解的乾淨重新實作。對筆寫入有未知風險，使用者自負。
 
 ## License
 

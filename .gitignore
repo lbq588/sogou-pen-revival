@@ -1,7 +1,23 @@
+# Python
 __pycache__/
 *.pyc
+
+# 轉寫輸出與備份（含個人錄音，不進版控）
 transcripts/
+pen_backup*/
+
+# 錄音筆媒體檔
 *.wav
 *.WAV
 *.AVO
 *.PCM
+
+# 原廠 App 二進位與反編譯產物（絕不散布）
+_apk_analysis/
+data/raw/
+*.apk
+*.dex
+*.so
+
+# 模型檔
+*.pkl
